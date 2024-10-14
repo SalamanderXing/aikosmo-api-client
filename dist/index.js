@@ -82,10 +82,11 @@ var assert = (condition, message) => {
   }
 };
 var ChatbotApi = class {
-  constructor(sourceUrl, chatbotSlug, hiddenChat) {
+  constructor(sourceUrl, chatbotSlug, hiddenChat, restoreChat = true) {
     this.sourceUrl = sourceUrl;
     this.chatbotSlug = chatbotSlug;
     this.hiddenChat = hiddenChat;
+    this.restoreChat = restoreChat;
     this.userId = null;
     this.websocket = null;
     this.onChecking = null;
@@ -94,6 +95,7 @@ var ChatbotApi = class {
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
     assert(typeof sourceUrl === "string", "Invalid source URL");
+    assert(typeof restoreChat === "boolean", "Invalid restore chat");
     this.userId = localStorage.getItem(`userId-${chatbotSlug}`);
     if (this.userId != null && !isValidUUIDv4(this.userId)) {
       this.userId = null;
@@ -131,7 +133,8 @@ var ChatbotApi = class {
     console.log("INIT CHAT");
     const params = {
       language: (navigator.language || "en-US").split("-")[0],
-      hiddenChat: this.hiddenChat.toString()
+      hiddenChat: this.hiddenChat.toString(),
+      restoreChat: this.restoreChat.toString()
     };
     if (this.chatbotSlug) {
       params.chatbotSlug = this.chatbotSlug;
@@ -169,7 +172,7 @@ var ChatbotApi = class {
         resolve();
         return;
       }
-      const MAX_RETRIES = 0;
+      const MAX_RETRIES = 5;
       let retryCount = 0;
       const connect = () => {
         const wsUrl = new URL(this.sourceUrl);
@@ -181,40 +184,39 @@ var ChatbotApi = class {
           (navigator.language || "en-US").split("-")[0]
         );
         wsUrl.searchParams.append("hiddenChat", this.hiddenChat.toString());
+        wsUrl.searchParams.append("restoreChat", this.restoreChat.toString());
         this.websocket = new WebSocket(wsUrl.toString());
         this.websocket.onopen = () => {
           console.log("WebSocket connection established");
+          retryCount = 0;
           resolve();
         };
         this.websocket.onerror = async (error) => {
           console.error("WebSocket connection error:", error);
-          if (retryCount < MAX_RETRIES) {
-            retryCount++;
-            console.log(
-              `Retrying connection (attempt ${retryCount}/${MAX_RETRIES})...`
-            );
-            try {
-              connect();
-            } catch (refreshError) {
-              reject(refreshError);
-            }
-          } else {
-            const errorMessage = `Failed to establish WebSocket connection after ${MAX_RETRIES} attempts`;
-            console.error(errorMessage);
-            localStorage.removeItem(`chatbotToken-${this.chatbotSlug}`);
-            localStorage.removeItem(`userId-${this.chatbotSlug}`);
-            this.userId = null;
-            reject(new Error(errorMessage));
-          }
+          retryConnection();
         };
         this.websocket.onclose = (event) => {
           console.log("WebSocket connection closed", event);
           this.websocket = null;
-          if (event.code !== 1e3) {
-            console.log("Attempting to reconnect...");
-            setTimeout(connect, 1e4);
-          }
+          retryConnection();
         };
+      };
+      const retryConnection = () => {
+        if (retryCount < MAX_RETRIES) {
+          retryCount++;
+          const delay = Math.min(1e3 * 2 ** retryCount, 3e4);
+          console.log(
+            `Retrying connection (attempt ${retryCount}/${MAX_RETRIES}) in ${delay}ms...`
+          );
+          setTimeout(connect, delay);
+        } else {
+          const errorMessage = `Failed to establish WebSocket connection after ${MAX_RETRIES} attempts`;
+          console.error(errorMessage);
+          localStorage.removeItem(`chatbotToken-${this.chatbotSlug}`);
+          localStorage.removeItem(`userId-${this.chatbotSlug}`);
+          this.userId = null;
+          reject(new Error(errorMessage));
+        }
       };
       connect();
     });

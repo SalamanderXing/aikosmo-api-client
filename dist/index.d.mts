@@ -102,15 +102,16 @@ declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
 type ChatbotData = z.infer<typeof ChatbotDataSchema>;
 
 declare class ChatbotApi {
-    private sourceUrl;
-    private chatbotSlug;
-    private hiddenChat;
+    sourceUrl: string;
+    chatbotSlug: string;
+    hiddenChat: boolean;
+    restoreChat: boolean;
     private userId;
     private websocket;
     onChecking: (() => Promise<void>) | null;
     onDoneChecking: (() => Promise<void>) | null;
     onError: (() => Promise<void>) | null;
-    constructor(sourceUrl: string, chatbotSlug: string, hiddenChat: boolean);
+    constructor(sourceUrl: string, chatbotSlug: string, hiddenChat: boolean, restoreChat?: boolean);
     newChat(): Promise<void>;
     getChatConfig(): Promise<ChatbotData>;
     private setupWebSocket;
