@@ -113,6 +113,7 @@ declare class ChatbotApi {
     onError: (() => Promise<void>) | null;
     constructor(sourceUrl: string, chatbotSlug: string, hiddenChat: boolean, restoreChat?: boolean);
     newChat(): Promise<void>;
+    private ensureWebSocketConnection;
     getChatConfig(): Promise<ChatbotData>;
     private setupWebSocket;
     fetchChatResponse({ newMessage, onNewChunk, onDone, }: {

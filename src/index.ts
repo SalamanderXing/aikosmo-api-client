@@ -16,7 +16,6 @@ const assert = (condition: boolean, message: string) => {
 export type { ChatbotData, ChatMessage };
 
 export class ChatbotApi {
-  private userId: string | null = null;
   private websocket: WebSocket | null = null;
   onChecking: (() => Promise<void>) | null = null;
   onDoneChecking: (() => Promise<void>) | null = null;
@@ -26,16 +25,22 @@ export class ChatbotApi {
     public sourceUrl: string,
     public chatbotSlug: string,
     public hiddenChat: boolean,
-    public restoreChat: boolean = true
+    public restoreChat: boolean = true,
+    public userId: string | null = null
   ) {
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
     assert(typeof sourceUrl === "string", "Invalid source URL");
     assert(typeof restoreChat === "boolean", "Invalid restore chat");
-    this.userId = localStorage.getItem(`userId-${chatbotSlug}`);
-    if (this.userId != null && !isValidUUIDv4(this.userId)) {
-      this.userId = null;
-    } else {
+    if (typeof window !== "undefined" && window.localStorage) {
+      this.userId =
+        this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
+      if (this.userId != null && !isValidUUIDv4(this.userId)) {
+        this.userId = null;
+      }
+    }
+
+    if (this.userId) {
       console.log("USER ID", this.userId);
     }
   }

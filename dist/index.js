@@ -104,13 +104,8 @@ var ChatbotApi = class {
     }
   }
   async newChat() {
-    if (this.websocket === null) {
-      await this.setupWebSocket();
-    }
-    if (!this.websocket) {
-      throw new Error("WebSocket connection not established");
-    }
-    this.websocket?.send(JSON.stringify({ type: "clientCreatedNewChat" }));
+    await this.ensureWebSocketConnection();
+    this.websocket.send(JSON.stringify({ type: "clientCreatedNewChat" }));
     return new Promise((resolve, reject) => {
       const timeoutDuration = 1e4;
       const timeoutId = setTimeout(() => {
@@ -122,12 +117,20 @@ var ChatbotApi = class {
         const data = JSON.parse(event.data);
         if (data.type === "newChatCreated") {
           clearTimeout(timeoutId);
-          this.websocket?.removeEventListener("message", messageHandler);
+          this.websocket.removeEventListener("message", messageHandler);
           resolve();
         }
       };
-      this.websocket?.addEventListener("message", messageHandler);
+      this.websocket.addEventListener("message", messageHandler);
     });
+  }
+  async ensureWebSocketConnection() {
+    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      await this.setupWebSocket();
+    }
+    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      throw new Error("Failed to establish WebSocket connection");
+    }
   }
   async getChatConfig() {
     console.log("INIT CHAT");
@@ -216,9 +219,7 @@ var ChatbotApi = class {
     onNewChunk,
     onDone
   }) {
-    if (this.websocket === null) {
-      await this.setupWebSocket();
-    }
+    await this.ensureWebSocketConnection();
     if (!this.websocket) {
       throw new Error("WebSocket connection not established");
     }
