@@ -30,14 +30,15 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
-  ChatbotApi: () => ChatbotApi
+  ChatbotApi: () => ChatbotApi,
+  ChatbotDataSchema: () => ChatbotDataSchema
 });
 module.exports = __toCommonJS(src_exports);
 var import_ky = __toESM(require("ky"));
 
 // src/types.ts
 var import_zod = require("zod");
-var DbChatbotDataSchema = import_zod.z.object({
+var ChatbotDataSchema = import_zod.z.object({
   popupMessageTitle: import_zod.z.record(import_zod.z.string(), import_zod.z.string()),
   popupMessage: import_zod.z.record(import_zod.z.string(), import_zod.z.string()),
   avatarUrl: import_zod.z.string(),
@@ -55,9 +56,7 @@ var DbChatbotDataSchema = import_zod.z.object({
   logoMaxWidthPercentage: import_zod.z.number().nullable(),
   chatAvatarUrl: import_zod.z.string().nullable(),
   exitPopupEnabled: import_zod.z.boolean(),
-  bookingIframeEnabled: import_zod.z.boolean()
-});
-var ChatbotDataSchema = DbChatbotDataSchema.extend({
+  bookingIframeEnabled: import_zod.z.boolean(),
   slug: import_zod.z.string(),
   userId: import_zod.z.string(),
   introMessage: import_zod.z.record(import_zod.z.string(), import_zod.z.string()),
@@ -81,25 +80,42 @@ var assert = (condition, message) => {
     throw new Error(message);
   }
 };
+var isValidHttpsUrl = (url) => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 var ChatbotApi = class {
-  constructor(sourceUrl, chatbotSlug, hiddenChat, restoreChat = true) {
-    this.sourceUrl = sourceUrl;
-    this.chatbotSlug = chatbotSlug;
-    this.hiddenChat = hiddenChat;
-    this.restoreChat = restoreChat;
-    this.userId = null;
+  constructor({
+    sourceUrl,
+    chatbotSlug,
+    hiddenChat,
+    restoreChat = true,
+    userId = null
+  }) {
     this.websocket = null;
     this.onChecking = null;
     this.onDoneChecking = null;
     this.onError = null;
+    assert(isValidHttpsUrl(sourceUrl), "Invalid source URL");
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
-    assert(typeof sourceUrl === "string", "Invalid source URL");
     assert(typeof restoreChat === "boolean", "Invalid restore chat");
-    this.userId = localStorage.getItem(`userId-${chatbotSlug}`);
-    if (this.userId != null && !isValidUUIDv4(this.userId)) {
-      this.userId = null;
-    } else {
+    this.sourceUrl = sourceUrl;
+    this.chatbotSlug = chatbotSlug;
+    this.hiddenChat = hiddenChat;
+    this.restoreChat = restoreChat;
+    this.userId = userId;
+    if (typeof window !== "undefined" && window.localStorage) {
+      this.userId = this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
+      if (this.userId != null && !isValidUUIDv4(this.userId)) {
+        this.userId = null;
+      }
+    }
+    if (this.userId) {
       console.log("USER ID", this.userId);
     }
   }
@@ -286,5 +302,6 @@ var ChatbotApi = class {
 };
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ChatbotApi
+  ChatbotApi,
+  ChatbotDataSchema
 });

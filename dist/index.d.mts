@@ -5,7 +5,7 @@ interface ChatMessage {
     role: "assistant" | "user" | "error";
     widgetId?: string;
 }
-declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
+declare const ChatbotDataSchema: z.ZodObject<{
     popupMessageTitle: z.ZodRecord<z.ZodString, z.ZodString>;
     popupMessage: z.ZodRecord<z.ZodString, z.ZodString>;
     avatarUrl: z.ZodString;
@@ -24,7 +24,6 @@ declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
     chatAvatarUrl: z.ZodNullable<z.ZodString>;
     exitPopupEnabled: z.ZodBoolean;
     bookingIframeEnabled: z.ZodBoolean;
-}, {
     slug: z.ZodString;
     userId: z.ZodString;
     introMessage: z.ZodRecord<z.ZodString, z.ZodString>;
@@ -42,7 +41,8 @@ declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
         widgetId?: string | undefined;
     }>, "many">;
     suggestedQuestions: z.ZodRecord<z.ZodString, z.ZodArray<z.ZodString, "many">>;
-}>, "strip", z.ZodTypeAny, {
+}, "strip", z.ZodTypeAny, {
+    userId: string;
     popupMessageTitle: Record<string, string>;
     popupMessage: Record<string, string>;
     avatarUrl: string;
@@ -61,7 +61,6 @@ declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
     exitPopupEnabled: boolean;
     bookingIframeEnabled: boolean;
     slug: string;
-    userId: string;
     introMessage: Record<string, string>;
     history: {
         content: string;
@@ -71,6 +70,7 @@ declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
     suggestedQuestions: Record<string, string[]>;
     avatarUrl2?: string | null | undefined;
 }, {
+    userId: string;
     popupMessageTitle: Record<string, string>;
     popupMessage: Record<string, string>;
     avatarUrl: string;
@@ -89,7 +89,6 @@ declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
     exitPopupEnabled: boolean;
     bookingIframeEnabled: boolean;
     slug: string;
-    userId: string;
     introMessage: Record<string, string>;
     history: {
         content: string;
@@ -102,16 +101,22 @@ declare const ChatbotDataSchema: z.ZodObject<z.objectUtil.extendShape<{
 type ChatbotData = z.infer<typeof ChatbotDataSchema>;
 
 declare class ChatbotApi {
-    sourceUrl: string;
-    chatbotSlug: string;
-    hiddenChat: boolean;
-    restoreChat: boolean;
-    private userId;
     private websocket;
     onChecking: (() => Promise<void>) | null;
     onDoneChecking: (() => Promise<void>) | null;
     onError: (() => Promise<void>) | null;
-    constructor(sourceUrl: string, chatbotSlug: string, hiddenChat: boolean, restoreChat?: boolean);
+    sourceUrl: string;
+    chatbotSlug: string;
+    hiddenChat: boolean;
+    restoreChat: boolean;
+    userId: string | null;
+    constructor({ sourceUrl, chatbotSlug, hiddenChat, restoreChat, userId, }: {
+        sourceUrl: string;
+        chatbotSlug: string;
+        hiddenChat: boolean;
+        restoreChat?: boolean;
+        userId?: string | null;
+    });
     newChat(): Promise<void>;
     private ensureWebSocketConnection;
     getChatConfig(): Promise<ChatbotData>;
@@ -123,4 +128,4 @@ declare class ChatbotApi {
     }): Promise<void>;
 }
 
-export { type ChatMessage, ChatbotApi, type ChatbotData };
+export { type ChatMessage, ChatbotApi, type ChatbotData, ChatbotDataSchema };

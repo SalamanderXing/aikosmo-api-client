@@ -3,7 +3,7 @@ import ky from "ky";
 
 // src/types.ts
 import { z } from "zod";
-var DbChatbotDataSchema = z.object({
+var ChatbotDataSchema = z.object({
   popupMessageTitle: z.record(z.string(), z.string()),
   popupMessage: z.record(z.string(), z.string()),
   avatarUrl: z.string(),
@@ -21,9 +21,7 @@ var DbChatbotDataSchema = z.object({
   logoMaxWidthPercentage: z.number().nullable(),
   chatAvatarUrl: z.string().nullable(),
   exitPopupEnabled: z.boolean(),
-  bookingIframeEnabled: z.boolean()
-});
-var ChatbotDataSchema = DbChatbotDataSchema.extend({
+  bookingIframeEnabled: z.boolean(),
   slug: z.string(),
   userId: z.string(),
   introMessage: z.record(z.string(), z.string()),
@@ -47,25 +45,42 @@ var assert = (condition, message) => {
     throw new Error(message);
   }
 };
+var isValidHttpsUrl = (url) => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 var ChatbotApi = class {
-  constructor(sourceUrl, chatbotSlug, hiddenChat, restoreChat = true) {
-    this.sourceUrl = sourceUrl;
-    this.chatbotSlug = chatbotSlug;
-    this.hiddenChat = hiddenChat;
-    this.restoreChat = restoreChat;
-    this.userId = null;
+  constructor({
+    sourceUrl,
+    chatbotSlug,
+    hiddenChat,
+    restoreChat = true,
+    userId = null
+  }) {
     this.websocket = null;
     this.onChecking = null;
     this.onDoneChecking = null;
     this.onError = null;
+    assert(isValidHttpsUrl(sourceUrl), "Invalid source URL");
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
-    assert(typeof sourceUrl === "string", "Invalid source URL");
     assert(typeof restoreChat === "boolean", "Invalid restore chat");
-    this.userId = localStorage.getItem(`userId-${chatbotSlug}`);
-    if (this.userId != null && !isValidUUIDv4(this.userId)) {
-      this.userId = null;
-    } else {
+    this.sourceUrl = sourceUrl;
+    this.chatbotSlug = chatbotSlug;
+    this.hiddenChat = hiddenChat;
+    this.restoreChat = restoreChat;
+    this.userId = userId;
+    if (typeof window !== "undefined" && window.localStorage) {
+      this.userId = this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
+      if (this.userId != null && !isValidUUIDv4(this.userId)) {
+        this.userId = null;
+      }
+    }
+    if (this.userId) {
       console.log("USER ID", this.userId);
     }
   }
@@ -251,5 +266,6 @@ var ChatbotApi = class {
   }
 };
 export {
-  ChatbotApi
+  ChatbotApi,
+  ChatbotDataSchema
 };

@@ -6,7 +6,7 @@ export interface ChatMessage {
   widgetId?: string;
 }
 
-export const DbChatbotDataSchema = z.object({
+export const ChatbotDataSchema = z.object({
   popupMessageTitle: z.record(z.string(), z.string()),
   popupMessage: z.record(z.string(), z.string()),
   avatarUrl: z.string(),
@@ -25,11 +25,6 @@ export const DbChatbotDataSchema = z.object({
   chatAvatarUrl: z.string().nullable(),
   exitPopupEnabled: z.boolean(),
   bookingIframeEnabled: z.boolean(),
-});
-
-export type DbChatbotData = z.infer<typeof DbChatbotDataSchema>;
-
-export const ChatbotDataSchema = DbChatbotDataSchema.extend({
   slug: z.string(),
   userId: z.string(),
   introMessage: z.record(z.string(), z.string()),

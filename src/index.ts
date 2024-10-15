@@ -13,25 +13,61 @@ const assert = (condition: boolean, message: string) => {
   }
 };
 
+const isValidHttpsUrl = (url: string): boolean => {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 export type { ChatbotData, ChatMessage };
+export { ChatbotDataSchema };
 
 export class ChatbotApi {
   private websocket: WebSocket | null = null;
-  onChecking: (() => Promise<void>) | null = null;
-  onDoneChecking: (() => Promise<void>) | null = null;
+  onCheckingAvailability: (() => Promise<void>) | null = null;
+  onDoneCheckingAvailability: (() => Promise<void>) | null = null;
   onError: (() => Promise<void>) | null = null;
+  sourceUrl: string;
+  chatbotSlug: string;
+  hiddenChat: boolean;
+  restoreChat: boolean;
+  userId: string | null;
 
-  constructor(
-    public sourceUrl: string,
-    public chatbotSlug: string,
-    public hiddenChat: boolean,
-    public restoreChat: boolean = true,
-    public userId: string | null = null
-  ) {
+  constructor({
+    sourceUrl,
+    chatbotSlug,
+    hiddenChat,
+    restoreChat = true,
+    userId = null,
+    onCheckingAvailability = null,
+    onDoneCheckingAvailability = null,
+    onError = null,
+  }: {
+    sourceUrl: string;
+    chatbotSlug: string;
+    hiddenChat: boolean;
+    restoreChat?: boolean;
+    userId?: string | null;
+    onCheckingAvailability?: (() => Promise<void>) | null;
+    onDoneCheckingAvailability?: (() => Promise<void>) | null;
+    onError?: (() => Promise<void>) | null;
+  }) {
+    assert(isValidHttpsUrl(sourceUrl), "Invalid source URL");
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
-    assert(typeof sourceUrl === "string", "Invalid source URL");
     assert(typeof restoreChat === "boolean", "Invalid restore chat");
+
+    this.sourceUrl = sourceUrl;
+    this.chatbotSlug = chatbotSlug;
+    this.hiddenChat = hiddenChat;
+    this.restoreChat = restoreChat;
+    this.userId = userId;
+    this.onCheckingAvailability = onCheckingAvailability;
+    this.onDoneCheckingAvailability = onDoneCheckingAvailability;
+    this.onError = onError;
     if (typeof window !== "undefined" && window.localStorage) {
       this.userId =
         this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
@@ -226,15 +262,15 @@ export class ChatbotApi {
         if (
           chunk.type === "functionCallBegin" &&
           chunk.functionName === "fetch_room_availability" &&
-          this.onChecking
+          this.onCheckingAvailability
         ) {
-          await this.onChecking();
+          await this.onCheckingAvailability();
         } else if (
           chunk.type === "functionCallEnd" &&
           chunk.functionName === "fetch_room_availability" &&
-          this.onDoneChecking
+          this.onDoneCheckingAvailability
         ) {
-          await this.onDoneChecking();
+          await this.onDoneCheckingAvailability();
         } else if (chunk.type === "streamingDone") {
           await onDone();
           resolve();
