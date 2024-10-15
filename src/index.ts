@@ -13,10 +13,10 @@ const assert = (condition: boolean, message: string) => {
   }
 };
 
-const isValidHttpsUrl = (url: string): boolean => {
+const isValidHttpUrl = (url: string): boolean => {
   try {
     const parsedUrl = new URL(url);
-    return parsedUrl.protocol === "https:";
+    return parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:";
   } catch {
     return false;
   }
@@ -35,6 +35,7 @@ export class ChatbotApi {
   hiddenChat: boolean;
   restoreChat: boolean;
   userId: string | null;
+  logEnabled: boolean;
 
   constructor({
     sourceUrl,
@@ -45,6 +46,7 @@ export class ChatbotApi {
     onCheckingAvailability = null,
     onDoneCheckingAvailability = null,
     onError = null,
+    logEnabled = true,
   }: {
     sourceUrl: string;
     chatbotSlug: string;
@@ -54,11 +56,13 @@ export class ChatbotApi {
     onCheckingAvailability?: (() => Promise<void>) | null;
     onDoneCheckingAvailability?: (() => Promise<void>) | null;
     onError?: (() => Promise<void>) | null;
+    logEnabled?: boolean;
   }) {
-    assert(isValidHttpsUrl(sourceUrl), "Invalid source URL");
+    assert(isValidHttpUrl(sourceUrl), "Invalid source URL");
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
     assert(typeof restoreChat === "boolean", "Invalid restore chat");
+    assert(typeof logEnabled === "boolean", "Invalid log enabled");
 
     this.sourceUrl = sourceUrl;
     this.chatbotSlug = chatbotSlug;
@@ -68,6 +72,7 @@ export class ChatbotApi {
     this.onCheckingAvailability = onCheckingAvailability;
     this.onDoneCheckingAvailability = onDoneCheckingAvailability;
     this.onError = onError;
+    this.logEnabled = logEnabled;
     if (typeof window !== "undefined" && window.localStorage) {
       this.userId =
         this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
@@ -75,7 +80,6 @@ export class ChatbotApi {
         this.userId = null;
       }
     }
-
     if (this.userId) {
       console.log("USER ID", this.userId);
     }
@@ -178,6 +182,7 @@ export class ChatbotApi {
         );
         wsUrl.searchParams.append("hiddenChat", this.hiddenChat.toString());
         wsUrl.searchParams.append("restoreChat", this.restoreChat.toString());
+        wsUrl.searchParams.append("logEnabled", this.logEnabled.toString());
         this.websocket = new WebSocket(wsUrl.toString());
 
         this.websocket.onopen = () => {
@@ -258,7 +263,6 @@ export class ChatbotApi {
           message?: string;
           functionName?: string;
         };
-        console.log("CHUNK", chunk);
         if (
           chunk.type === "functionCallBegin" &&
           chunk.functionName === "fetch_room_availability" &&

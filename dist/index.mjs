@@ -45,10 +45,10 @@ var assert = (condition, message) => {
     throw new Error(message);
   }
 };
-var isValidHttpsUrl = (url) => {
+var isValidHttpUrl = (url) => {
   try {
     const parsedUrl = new URL(url);
-    return parsedUrl.protocol === "https:";
+    return parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:";
   } catch {
     return false;
   }
@@ -59,13 +59,16 @@ var ChatbotApi = class {
     chatbotSlug,
     hiddenChat,
     restoreChat = true,
-    userId = null
+    userId = null,
+    onCheckingAvailability = null,
+    onDoneCheckingAvailability = null,
+    onError = null
   }) {
     this.websocket = null;
-    this.onChecking = null;
-    this.onDoneChecking = null;
+    this.onCheckingAvailability = null;
+    this.onDoneCheckingAvailability = null;
     this.onError = null;
-    assert(isValidHttpsUrl(sourceUrl), "Invalid source URL");
+    assert(isValidHttpUrl(sourceUrl), "Invalid source URL");
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
     assert(typeof restoreChat === "boolean", "Invalid restore chat");
@@ -74,6 +77,9 @@ var ChatbotApi = class {
     this.hiddenChat = hiddenChat;
     this.restoreChat = restoreChat;
     this.userId = userId;
+    this.onCheckingAvailability = onCheckingAvailability;
+    this.onDoneCheckingAvailability = onDoneCheckingAvailability;
+    this.onError = onError;
     if (typeof window !== "undefined" && window.localStorage) {
       this.userId = this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
       if (this.userId != null && !isValidUUIDv4(this.userId)) {
@@ -230,11 +236,10 @@ var ChatbotApi = class {
         hasReceivedResponse = true;
         clearTimeout(timeoutId);
         const chunk = JSON.parse(event.data);
-        console.log("CHUNK", chunk);
-        if (chunk.type === "functionCallBegin" && chunk.functionName === "fetch_room_availability" && this.onChecking) {
-          await this.onChecking();
-        } else if (chunk.type === "functionCallEnd" && chunk.functionName === "fetch_room_availability" && this.onDoneChecking) {
-          await this.onDoneChecking();
+        if (chunk.type === "functionCallBegin" && chunk.functionName === "fetch_room_availability" && this.onCheckingAvailability) {
+          await this.onCheckingAvailability();
+        } else if (chunk.type === "functionCallEnd" && chunk.functionName === "fetch_room_availability" && this.onDoneCheckingAvailability) {
+          await this.onDoneCheckingAvailability();
         } else if (chunk.type === "streamingDone") {
           await onDone();
           resolve();

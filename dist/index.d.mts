@@ -102,20 +102,23 @@ type ChatbotData = z.infer<typeof ChatbotDataSchema>;
 
 declare class ChatbotApi {
     private websocket;
-    onChecking: (() => Promise<void>) | null;
-    onDoneChecking: (() => Promise<void>) | null;
+    onCheckingAvailability: (() => Promise<void>) | null;
+    onDoneCheckingAvailability: (() => Promise<void>) | null;
     onError: (() => Promise<void>) | null;
     sourceUrl: string;
     chatbotSlug: string;
     hiddenChat: boolean;
     restoreChat: boolean;
     userId: string | null;
-    constructor({ sourceUrl, chatbotSlug, hiddenChat, restoreChat, userId, }: {
+    constructor({ sourceUrl, chatbotSlug, hiddenChat, restoreChat, userId, onCheckingAvailability, onDoneCheckingAvailability, onError, }: {
         sourceUrl: string;
         chatbotSlug: string;
         hiddenChat: boolean;
         restoreChat?: boolean;
         userId?: string | null;
+        onCheckingAvailability?: (() => Promise<void>) | null;
+        onDoneCheckingAvailability?: (() => Promise<void>) | null;
+        onError?: (() => Promise<void>) | null;
     });
     newChat(): Promise<void>;
     private ensureWebSocketConnection;
