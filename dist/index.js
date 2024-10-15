@@ -172,8 +172,7 @@ var ChatbotApi = class {
         resolve();
         return;
       }
-      const MAX_RETRIES = 5;
-      let retryCount = 0;
+      let isInitialConnection = true;
       const connect = () => {
         const wsUrl = new URL(this.sourceUrl);
         wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
@@ -188,11 +187,14 @@ var ChatbotApi = class {
         this.websocket = new WebSocket(wsUrl.toString());
         this.websocket.onopen = () => {
           console.log("WebSocket connection established");
-          retryCount = 0;
-          resolve();
+          if (isInitialConnection) {
+            isInitialConnection = false;
+            resolve();
+          }
         };
         this.websocket.onerror = async (error) => {
           console.error("WebSocket connection error:", error);
+          this.websocket = null;
           retryConnection();
         };
         this.websocket.onclose = (event) => {
@@ -202,21 +204,9 @@ var ChatbotApi = class {
         };
       };
       const retryConnection = () => {
-        if (retryCount < MAX_RETRIES) {
-          retryCount++;
-          const delay = Math.min(1e3 * 2 ** retryCount, 3e4);
-          console.log(
-            `Retrying connection (attempt ${retryCount}/${MAX_RETRIES}) in ${delay}ms...`
-          );
-          setTimeout(connect, delay);
-        } else {
-          const errorMessage = `Failed to establish WebSocket connection after ${MAX_RETRIES} attempts`;
-          console.error(errorMessage);
-          localStorage.removeItem(`chatbotToken-${this.chatbotSlug}`);
-          localStorage.removeItem(`userId-${this.chatbotSlug}`);
-          this.userId = null;
-          reject(new Error(errorMessage));
-        }
+        const delay = 1e3;
+        console.log(`Attempting to reconnect in ${delay}ms...`);
+        setTimeout(connect, delay);
       };
       connect();
     });
