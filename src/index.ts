@@ -118,6 +118,10 @@ export class ChatbotApi {
 
   private async ensureWebSocketConnection(): Promise<void> {
     if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      // Clear the existing websocket if it's not in OPEN state
+      if (this.websocket && this.websocket.readyState !== WebSocket.OPEN) {
+        this.websocket = null;
+      }
       await this.setupWebSocket();
     }
     if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
@@ -203,13 +207,19 @@ export class ChatbotApi {
         this.websocket.onerror = async (error) => {
           console.error("WebSocket connection error:", error);
           this.websocket = null;
-          retryConnection();
+          if (isInitialConnection) {
+            reject(error);
+          } else {
+            retryConnection();
+          }
         };
 
         this.websocket.onclose = (event) => {
           console.log("WebSocket connection closed", event);
           this.websocket = null;
-          retryConnection();
+          if (!isInitialConnection) {
+            retryConnection();
+          }
         };
       };
 
