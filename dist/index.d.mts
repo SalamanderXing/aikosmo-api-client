@@ -110,7 +110,8 @@ declare class ChatbotApi {
     hiddenChat: boolean;
     restoreChat: boolean;
     userId: string | null;
-    constructor({ sourceUrl, chatbotSlug, hiddenChat, restoreChat, userId, onCheckingAvailability, onDoneCheckingAvailability, onError, }: {
+    logEnabled: boolean;
+    constructor({ sourceUrl, chatbotSlug, hiddenChat, restoreChat, userId, onCheckingAvailability, onDoneCheckingAvailability, onError, logEnabled, }: {
         sourceUrl: string;
         chatbotSlug: string;
         hiddenChat: boolean;
@@ -119,6 +120,7 @@ declare class ChatbotApi {
         onCheckingAvailability?: (() => Promise<void>) | null;
         onDoneCheckingAvailability?: (() => Promise<void>) | null;
         onError?: (() => Promise<void>) | null;
+        logEnabled?: boolean;
     });
     newChat(): Promise<void>;
     private ensureWebSocketConnection;

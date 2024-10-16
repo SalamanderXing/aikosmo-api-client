@@ -1,5 +1,6 @@
 import ky from "ky";
-import { ChatbotDataSchema, ChatbotData, ChatMessage } from "./types";
+import { v4 as uuidv4 } from "uuid";
+import { ChatbotData, ChatbotDataSchema, ChatMessage } from "./types";
 
 function isValidUUIDv4(str: string): boolean {
   const uuidv4Regex =
@@ -78,6 +79,12 @@ export class ChatbotApi {
         this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
       if (this.userId != null && !isValidUUIDv4(this.userId)) {
         this.userId = null;
+      }
+    }
+    if (!this.userId) {
+      this.userId = uuidv4();
+      if (typeof window !== "undefined" && window.localStorage) {
+        localStorage.setItem(`userId-${this.chatbotSlug}`, this.userId);
       }
     }
     if (this.userId) {
@@ -174,7 +181,7 @@ export class ChatbotApi {
       const connect = () => {
         const wsUrl = new URL(this.sourceUrl);
         wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
-        wsUrl.searchParams.append("userId", this.userId || "");
+        wsUrl.searchParams.append("userId", this.userId || uuidv4());
         wsUrl.searchParams.append("chatbotSlug", this.chatbotSlug);
         wsUrl.searchParams.append(
           "language",

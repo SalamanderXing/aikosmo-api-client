@@ -33,7 +33,7 @@ export const ChatbotDataSchema = z.object({
       content: z.string(),
       role: z.enum(["assistant", "user", "error"]),
       widgetId: z.string().optional(),
-    })
+    }),
   ),
   suggestedQuestions: z.record(z.string(), z.array(z.string())),
 });

@@ -35,6 +35,7 @@ __export(src_exports, {
 });
 module.exports = __toCommonJS(src_exports);
 var import_ky = __toESM(require("ky"));
+var import_uuid = require("uuid");
 
 // src/types.ts
 var import_zod = require("zod");
@@ -97,7 +98,8 @@ var ChatbotApi = class {
     userId = null,
     onCheckingAvailability = null,
     onDoneCheckingAvailability = null,
-    onError = null
+    onError = null,
+    logEnabled = true
   }) {
     this.websocket = null;
     this.onCheckingAvailability = null;
@@ -107,6 +109,7 @@ var ChatbotApi = class {
     assert(typeof hiddenChat === "boolean", "Invalid hidden chat");
     assert(typeof chatbotSlug === "string", "Invalid chatbot slug");
     assert(typeof restoreChat === "boolean", "Invalid restore chat");
+    assert(typeof logEnabled === "boolean", "Invalid log enabled");
     this.sourceUrl = sourceUrl;
     this.chatbotSlug = chatbotSlug;
     this.hiddenChat = hiddenChat;
@@ -115,10 +118,17 @@ var ChatbotApi = class {
     this.onCheckingAvailability = onCheckingAvailability;
     this.onDoneCheckingAvailability = onDoneCheckingAvailability;
     this.onError = onError;
+    this.logEnabled = logEnabled;
     if (typeof window !== "undefined" && window.localStorage) {
       this.userId = this.userId ?? localStorage.getItem(`userId-${chatbotSlug}`);
       if (this.userId != null && !isValidUUIDv4(this.userId)) {
         this.userId = null;
+      }
+    }
+    if (!this.userId) {
+      this.userId = (0, import_uuid.v4)();
+      if (typeof window !== "undefined" && window.localStorage) {
+        localStorage.setItem(`userId-${this.chatbotSlug}`, this.userId);
       }
     }
     if (this.userId) {
@@ -201,7 +211,7 @@ var ChatbotApi = class {
       const connect = () => {
         const wsUrl = new URL(this.sourceUrl);
         wsUrl.protocol = wsUrl.protocol === "https:" ? "wss:" : "ws:";
-        wsUrl.searchParams.append("userId", this.userId || "");
+        wsUrl.searchParams.append("userId", this.userId || (0, import_uuid.v4)());
         wsUrl.searchParams.append("chatbotSlug", this.chatbotSlug);
         wsUrl.searchParams.append(
           "language",
@@ -209,6 +219,7 @@ var ChatbotApi = class {
         );
         wsUrl.searchParams.append("hiddenChat", this.hiddenChat.toString());
         wsUrl.searchParams.append("restoreChat", this.restoreChat.toString());
+        wsUrl.searchParams.append("logEnabled", this.logEnabled.toString());
         this.websocket = new WebSocket(wsUrl.toString());
         this.websocket.onopen = () => {
           console.log("WebSocket connection established");
